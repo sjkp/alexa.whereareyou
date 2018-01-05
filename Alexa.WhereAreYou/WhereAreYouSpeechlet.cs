@@ -10,6 +10,7 @@ namespace Alexa.WhereAreYou
 {
     public class WhereAreYouSpeechlet : Speechlet
     {
+        private const string StartTimeKey = "startTime";
         public override SpeechletResponse OnIntent(IntentRequest request, Session session)
         {
             Intent intent = request.Intent;
@@ -19,11 +20,32 @@ namespace Alexa.WhereAreYou
             // rather, the intent specific response will be returned.
             if ("StartGame".Equals(intentName))
             {
-                return BuildSpeechletResponse(intentName, "Starting game", false);
+                return StartGame(intentName);
+
             }
             else if ("WhereAreYou".Equals(intentName))
             {
                 return BuildSpeechletResponse(intentName, "I'm hiding", false);
+            }
+            else if("Found".Equals(intentName))
+            {
+                if (session.Attributes.ContainsKey(StartTimeKey) && session.Attributes[StartTimeKey] != null)
+                {
+                    return BuildSpeechletResponse(intentName, $"You found me in {(int)(DateTime.UtcNow - DateTime.Parse(session.Attributes[StartTimeKey])).TotalSeconds} seconds", false);
+                }
+                return BuildSpeechletResponse(intentName, "You must say ready before you can find me", false);
+            }
+            else if("Ready".Equals(intentName))
+            {
+                if (!session.Attributes.ContainsKey(StartTimeKey))
+                {
+                    session.Attributes.Add(StartTimeKey, DateTime.UtcNow.ToString());
+                }else
+                {
+                    session.Attributes[StartTimeKey] = DateTime.UtcNow.ToString();
+                }
+                return BuildSpeechletResponse(intentName, "", false);
+
             }
             else if ("EndGame".Equals(intentName))
             {
@@ -33,6 +55,12 @@ namespace Alexa.WhereAreYou
             {
                 throw new SpeechletException("Invalid Intent");
             }
+        }
+
+        private SpeechletResponse StartGame(string intentName)
+        {
+
+            return BuildSpeechletResponse(intentName, "Let's play. Hide me somewhere, once I'm hidden say ready and the game starts. If you need a clue while we play say where are you?", false);
         }
 
         //private SpeechletResponse SetNameInSessionAndSayHello(Intent intent, Session session)
@@ -74,7 +102,7 @@ namespace Alexa.WhereAreYou
             // Create the plain text output.
             PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
             speech.Text = output;
-
+            
             // Create the speechlet response.
             SpeechletResponse response = new SpeechletResponse();
             response.ShouldEndSession = shouldEndSession;
@@ -104,7 +132,7 @@ namespace Alexa.WhereAreYou
         {
             // Create the welcome message.
             string speechOutput =
-                "Welcome to the Alexa AppKit session sample app, please tell me your name by saying, my name is Sam";
+                "Welcome to hide and seek with Alexa. Say start game to begin a new game.";
 
             // Here we are setting shouldEndSession to false to not end the session and
             // prompt the user for input
